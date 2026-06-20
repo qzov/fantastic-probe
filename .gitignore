@@ -1,0 +1,53 @@
+# 构建产物
+build/
+*.deb
+*.rpm
+*.tar.gz
+
+# 临时文件和备份
+*.bak
+*.tmp
+*.swp
+*~
+.DS_Store
+
+# 日志文件
+*.log
+logs/
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.sublime-*
+.editorconfig
+
+# Claude 工作目录（完全忽略）
+.claude/
+
+# 测试和开发
+test/
+.env
+.env.local
+
+# 系统文件
+Thumbs.db
+desktop.ini
+
+# 包管理器
+node_modules/
+.npm/
+.yarn/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+
+# 完全忽略 static 目录（运行时会自动从 Release 下载并缓存）
+static/
+
+# 全局忽略 zip 文件
+*.zip

@@ -1,0 +1,17 @@
+# Fantastic-Probe Cron 扫描任务（/etc/cron.d/fantastic-probe 格式）
+# 注意：此模板供参考，实际安装由 fantastic-probe-install.sh 自动生成
+#       如需手动修改，请运行 'sudo fp-config edit' 或直接编辑 /etc/cron.d/fantastic-probe
+#
+# /etc/cron.d 格式要求：必须包含用户字段（root）
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# 每 1 分钟执行一次扫描
+*/1 * * * * root /usr/local/bin/fantastic-probe-cron-scanner scan >> /var/log/fantastic_probe.log 2>&1
+
+# 每小时清理过期的锁文件（防止孤立锁阻止扫描）
+0 * * * * root rm -f /tmp/fantastic_probe_cron_scanner.lock 2>/dev/null || true
+
+# 每天凌晨 2 点输出失败统计到日志
+0 2 * * * root /usr/local/bin/fantastic-probe-cron-scanner stats >> /var/log/fantastic_probe.log 2>&1

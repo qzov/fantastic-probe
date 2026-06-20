@@ -1,0 +1,11 @@
+[Unit]
+Description=Fantastic-Probe 扫描定时器（每分钟触发）
+Requires=fantastic-probe.service
+
+[Timer]
+OnCalendar=*:0/1
+AccuracySec=5s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

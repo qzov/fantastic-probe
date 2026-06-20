@@ -1,0 +1,11 @@
+[Unit]
+Description=Fantastic-Probe ISO 媒体信息扫描服务
+Documentation=https://github.com/qzov/fantastic-probe
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/fantastic-probe-cron-scanner scan
+StandardOutput=append:/var/log/fantastic_probe.log
+StandardError=append:/var/log/fantastic_probe.log
