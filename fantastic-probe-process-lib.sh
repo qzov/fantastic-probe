@@ -192,7 +192,13 @@ check_disk_space() {
     local target_dir="$1"
     local min_free_mb=100
 
-    local available_mb=$(df -BM "$target_dir" | awk 'NR==2 {print $4}' | sed 's/M//')
+    local available_mb
+    available_mb=$(timeout 10 df -BM "$target_dir" 2>/dev/null | awk 'NR==2 {print $4}' | sed 's/M//')
+
+    if [ -z "$available_mb" ]; then
+        log_warn "磁盘空间检查超时或失败: ${target_dir}，跳过空间检查"
+        return 0
+    fi
 
     if [ "$available_mb" -lt "$min_free_mb" ]; then
         log_error "磁盘空间不足: ${target_dir} (可用: ${available_mb}MB)"
@@ -216,7 +222,7 @@ is_fuse_mount() {
 
     if [ -f /proc/mounts ]; then
         local mount_point
-        mount_point=$(df "$iso_path" 2>/dev/null | tail -1 | awk '{print $6}')
+        mount_point=$(timeout 10 df "$iso_path" 2>/dev/null | tail -1 | awk '{print $6}')
         if [ -n "$mount_point" ]; then
             if grep -q "^[^ ]* $mount_point fuse" /proc/mounts 2>/dev/null; then
                 log_debug "  检测到 FUSE 挂载点（/proc/mounts 验证）"

@@ -15,13 +15,13 @@ INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/${GITHUB_REPO}/main/instal
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="/var/backups/fantastic-probe"
-CURRENT_VERSION="1.2.2"  # 硬编码默认值
+CURRENT_VERSION="1.3.1"  # 硬编码默认值
 
 if [ -f "$SCRIPT_DIR/get-version.sh" ]; then
     source "$SCRIPT_DIR/get-version.sh"
     CURRENT_VERSION="$VERSION"
 elif command -v git &> /dev/null && [ -d "$SCRIPT_DIR/.git" ]; then
-    CURRENT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "1.2.2")
+    CURRENT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "1.3.1")
 fi
 
 #==============================================================================

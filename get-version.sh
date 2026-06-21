@@ -14,7 +14,7 @@ export LC_ALL=C.UTF-8
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Default version (fallback)
-VERSION="1.2.2"
+VERSION="1.3.1"
 
 #==============================================================================
 # Method 1: Get from local Git tags
@@ -60,7 +60,7 @@ get_version_from_script_comment() {
 # Note: Does not fetch from GitHub API (that's "remote version", handled by caller)
 VERSION=$(get_version_from_git_tag) || \
 VERSION=$(get_version_from_script_comment "$1") || \
-VERSION="1.2.2"  # Final fallback to hardcoded default
+VERSION="1.3.1"  # Final fallback to hardcoded default
 
 #==============================================================================
 # Export variable

@@ -4,6 +4,22 @@ All notable changes to Fantastic-Probe are documented here.
 
 ---
 
+## [1.3.1] - 2026-06-21
+
+### Fixed
+
+- **Stale mount hang**: `find` command in cron scanner now has configurable timeout (default 60s), preventing infinite hang when STRM_ROOT contains stale NFS/FUSE mount points
+- **df hang protection**: `check_disk_space()` and `is_fuse_mount()` now use 10s timeout for `df` calls to prevent blocking on unresponsive mounts
+- When find timeout is hit, scanner logs a warning and processes whatever files were discovered before the timeout
+- **FUSE mount auto-exclusion**: `scan_and_process()` now detects FUSE mounts (rclone, alist, etc.) under STRM_ROOT via `/proc/mounts` and automatically prunes them from traversal — avoids wasting time traversing cloud-backed directories that don't contain .strm files
+
+### Changed
+
+- Added `CRON_FIND_TIMEOUT` configuration option (default: 60 seconds)
+- config.template updated with FIND_TIMEOUT documentation
+
+---
+
 ## [1.3.0] - 2026-06-20
 
 ### Breaking Changes

@@ -11,12 +11,12 @@ set -euo pipefail
 
 # Read version dynamically
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VERSION="1.2.2"  # Hardcoded default
+VERSION="1.3.1"  # Hardcoded default
 
 if [ -f "$SCRIPT_DIR/get-version.sh" ]; then
     source "$SCRIPT_DIR/get-version.sh"
 elif command -v git &> /dev/null && [ -d "$SCRIPT_DIR/.git" ]; then
-    VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "1.2.2")
+    VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "1.3.1")
 fi
 
 #==============================================================================
@@ -36,6 +36,7 @@ CRON_LOCK_FILE="/tmp/fantastic_probe_cron_scanner.lock"
 FAILURE_CACHE_DB="/var/lib/fantastic-probe/failure_cache.db"
 MAX_RETRY_COUNT=3  # Stop retrying after this many failures
 SCAN_BATCH_SIZE=10  # Max files to process per scan
+FIND_TIMEOUT=60     # Max seconds for file discovery (prevent stale mount hangs)
 
 # Load configuration file
 if [ -f "$CONFIG_FILE" ]; then
@@ -46,6 +47,7 @@ fi
 # Compatibility with config file variable names (config.template uses CRON_ prefix)
 MAX_RETRY_COUNT=${CRON_MAX_RETRY_COUNT:-$MAX_RETRY_COUNT}
 SCAN_BATCH_SIZE=${CRON_SCAN_BATCH_SIZE:-$SCAN_BATCH_SIZE}
+FIND_TIMEOUT=${CRON_FIND_TIMEOUT:-$FIND_TIMEOUT}
 
 # Ensure failure cache directory exists
 CACHE_DIR=$(dirname "$FAILURE_CACHE_DB")
@@ -311,8 +313,37 @@ scan_and_process() {
     # Initialize failure cache (silent)
     init_failure_cache
 
-    # Find all .iso.strm files without JSON
+    # Find all .iso.strm files without JSON (with timeout protection against stale mounts)
     local pending_files=()
+    local find_tmpfile
+    find_tmpfile=$(mktemp) || {
+        log_error "无法创建临时文件，扫描终止"
+        return 1
+    }
+
+    # Detect FUSE mount points under STRM_ROOT and exclude them from traversal
+    # FUSE mounts (rclone, alist, etc.) have deep/remote dirs that cause find to hang
+    local fuse_prune_args=()
+    if [ -f /proc/mounts ]; then
+        while IFS= read -r mount_line; do
+            local mount_point=$(echo "$mount_line" | awk '{print $2}')
+            local mount_fs=$(echo "$mount_line" | awk '{print $3}')
+            # Only exclude if mount_point is a child of STRM_ROOT (not STRM_ROOT itself)
+            if [[ "$mount_point" == "$STRM_ROOT"/* ]] && [[ "$mount_fs" == *"fuse"* || "$mount_fs" == *"FUSE"* ]]; then
+                fuse_prune_args+=(-path "$mount_point" -prune -o)
+                log_info "跳过 FUSE 挂载点: $mount_point"
+            fi
+        done < /proc/mounts
+    fi
+
+    local find_exit=0
+    timeout "$FIND_TIMEOUT" find "$STRM_ROOT" "${fuse_prune_args[@]}" -type f -name "*.iso.strm" -print0 > "$find_tmpfile" 2>/dev/null || find_exit=$?
+
+    if [ $find_exit -eq 124 ]; then
+        log_warn "find 扫描超时（${FIND_TIMEOUT}秒），目录可能包含僵死挂载点，仅处理已扫描到的文件"
+    elif [ $find_exit -ne 0 ]; then
+        log_warn "find 扫描异常退出（退出码: $find_exit），仅处理已扫描到的文件"
+    fi
 
     while IFS= read -r -d '' strm_file; do
         local strm_dir
@@ -327,7 +358,9 @@ scan_and_process() {
         if [ ! -f "$json_file" ]; then
             pending_files+=("$strm_file")
         fi
-    done < <(find "$STRM_ROOT" -type f -name "*.iso.strm" -print0 2>/dev/null)
+    done < "$find_tmpfile"
+
+    rm -f "$find_tmpfile"
 
     local total_pending=${#pending_files[@]}
 

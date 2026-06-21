@@ -83,6 +83,13 @@ CRON_MAX_RETRY_COUNT=3
 # 推荐值：10（每个文件处理 300-600 秒，总时间 50-100 分钟）
 CRON_SCAN_BATCH_SIZE=10
 
+# Cron 扫描模式的文件发现超时（秒）
+# 说明：find 命令遍历 STRM 根目录的超时时间
+#       如果目录包含僵死的网络挂载点，find 将无限阻塞
+#       超时后仅处理已扫描到的文件，下次扫描继续处理剩余文件
+# 推荐值：60（大多数本地目录在 10 秒内完成）
+CRON_FIND_TIMEOUT=60
+
 # 失败缓存数据库路径
 # 说明：存储 Cron 模式中失败文件的重试次数和错误信息
 FAILURE_CACHE_DB="/var/lib/fantastic-probe/failure_cache.db"
