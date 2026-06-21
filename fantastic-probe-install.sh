@@ -479,7 +479,30 @@ if [ "$PKG_MANAGER" = "unknown" ]; then
     exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Detect install mode and resolve project directory
+REPO_URL="https://github.com/qzov/fantastic-probe"
+REPO_ARCHIVE_URL="${REPO_URL}/archive/refs/heads/main.tar.gz"
+
+if [[ -n "${BASH_SOURCE[0]:-}" ]] && [[ -f "${BASH_SOURCE[0]}" ]]; then
+    # Mode 1: Running from a local file (./install.sh or bash install.sh)
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+    # Mode 2: Running from pipe (curl | bash)
+    SCRIPT_DIR=$(mktemp -d)
+    trap "rm -rf '$SCRIPT_DIR'" EXIT
+    echo "检测到管道安装模式，下载项目文件..."
+
+    if command -v git &>/dev/null; then
+        git clone --depth 1 "${REPO_URL}.git" "$SCRIPT_DIR" 2>&1 | sed 's/^/  /'
+    elif command -v curl &>/dev/null; then
+        curl -fsSL "$REPO_ARCHIVE_URL" | tar xz -C "$SCRIPT_DIR" --strip-components=1
+    elif command -v wget &>/dev/null; then
+        wget -qO- "$REPO_ARCHIVE_URL" | tar xz -C "$SCRIPT_DIR" --strip-components=1
+    else
+        echo "错误: 需要 git、curl 或 wget 来下载项目文件"
+        exit 1
+    fi
+fi
 
 echo " 脚本目录: $SCRIPT_DIR"
 echo ""

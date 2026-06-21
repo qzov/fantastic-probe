@@ -13,15 +13,23 @@ GITHUB_REPO="qzov/fantastic-probe"
 GITHUB_API_URL="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
 INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/${GITHUB_REPO}/main/install.sh"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Determine script directory (works for both file and pipe modes)
+if [[ -n "${BASH_SOURCE[0]:-}" ]] && [[ -f "${BASH_SOURCE[0]}" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+    SCRIPT_DIR=""
+fi
 BACKUP_DIR="/var/backups/fantastic-probe"
 CURRENT_VERSION="1.3.1"  # 硬编码默认值
 
-if [ -f "$SCRIPT_DIR/get-version.sh" ]; then
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/get-version.sh" ]; then
     source "$SCRIPT_DIR/get-version.sh"
     CURRENT_VERSION="$VERSION"
-elif command -v git &> /dev/null && [ -d "$SCRIPT_DIR/.git" ]; then
+elif [ -n "$SCRIPT_DIR" ] && command -v git &> /dev/null && [ -d "$SCRIPT_DIR/.git" ]; then
     CURRENT_VERSION=$(git -C "$SCRIPT_DIR" describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "1.3.1")
+elif [ -f /usr/local/bin/get-version.sh ]; then
+    source /usr/local/bin/get-version.sh
+    CURRENT_VERSION="$VERSION"
 fi
 
 #==============================================================================
@@ -138,7 +146,7 @@ rollback() {
 # 支持 --rollback <备份路径> 命令行参数
 if [ "${1:-}" = "--rollback" ]; then
     if [ -z "${2:-}" ]; then
-        echo "用法: sudo bash $0 --rollback <备份路径>"
+        echo "用法: sudo update.sh --rollback <备份路径>"
         echo ""
         echo "可用备份列表："
         if [ -d "$BACKUP_DIR" ]; then
@@ -159,7 +167,7 @@ echo ""
 
 if [ "$EUID" -ne 0 ]; then
     error "请使用 root 权限运行此脚本"
-    echo "   sudo bash $0"
+    echo "   sudo update.sh"
     exit 1
 fi
 
@@ -273,7 +281,7 @@ if [ $UPDATE_EXIT_CODE -eq 0 ]; then
     echo "=========================================="
     echo ""
     echo "备份位置: $BACKUP_PATH"
-    echo "回滚命令: sudo bash $0 --rollback $BACKUP_PATH"
+    echo "回滚命令: sudo update.sh --rollback $BACKUP_PATH"
     echo ""
 else
     echo ""
@@ -289,7 +297,7 @@ else
     if [[ "$do_rollback" =~ ^[Yy]$ ]]; then
         rollback "$BACKUP_PATH"
     else
-        echo "手动回滚命令: sudo bash $0 --rollback $BACKUP_PATH"
+        echo "手动回滚命令: sudo update.sh --rollback $BACKUP_PATH"
     fi
     exit 1
 fi

@@ -12,11 +12,15 @@ All notable changes to Fantastic-Probe are documented here.
 - **df hang protection**: `check_disk_space()` and `is_fuse_mount()` now use 10s timeout for `df` calls to prevent blocking on unresponsive mounts
 - When find timeout is hit, scanner logs a warning and processes whatever files were discovered before the timeout
 - **FUSE mount auto-exclusion**: `scan_and_process()` now detects FUSE mounts (rclone, alist, etc.) under STRM_ROOT via `/proc/mounts` and automatically prunes them from traversal — avoids wasting time traversing cloud-backed directories that don't contain .strm files
+- **Pipe-mode install**: `install.sh` now detects when it is executed via `curl | bash` and automatically downloads the full repository before installing, fixing silent failures where `SCRIPT_DIR` pointed to the wrong directory
+- **Pipe-mode update**: `update.sh` no longer crashes with `BASH_SOURCE[0]: unbound variable` when piped via `curl | bash`; falls back to installed `/usr/local/bin/get-version.sh` for version detection
 
 ### Changed
 
 - Added `CRON_FIND_TIMEOUT` configuration option (default: 60 seconds)
 - config.template updated with FIND_TIMEOUT documentation
+- `install.sh` auto-detects pipe vs file execution mode and adjusts `SCRIPT_DIR` accordingly
+- `update.sh` `$0` references replaced with `sudo update.sh` for reliability in pipe mode
 
 ---
 
