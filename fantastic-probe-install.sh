@@ -492,16 +492,40 @@ else
     trap "rm -rf '$SCRIPT_DIR'" EXIT
     echo "检测到管道安装模式，下载项目文件..."
 
+    download_ok=false
+
     if command -v git &>/dev/null; then
-        git clone --depth 1 "${REPO_URL}.git" "$SCRIPT_DIR" 2>&1 | sed 's/^/  /'
-    elif command -v curl &>/dev/null; then
-        curl -fsSL "$REPO_ARCHIVE_URL" | tar xz -C "$SCRIPT_DIR" --strip-components=1
-    elif command -v wget &>/dev/null; then
-        wget -qO- "$REPO_ARCHIVE_URL" | tar xz -C "$SCRIPT_DIR" --strip-components=1
-    else
-        echo "错误: 需要 git、curl 或 wget 来下载项目文件"
+        echo "  使用 git clone..."
+        if git clone --depth 1 "${REPO_URL}.git" "$SCRIPT_DIR" 2>&1 | sed 's/^/  /'; then
+            download_ok=true
+        else
+            echo "  git clone 失败，尝试其它方式..."
+        fi
+    fi
+
+    if [ "$download_ok" = false ] && command -v curl &>/dev/null; then
+        echo "  使用 curl 下载..."
+        if curl -fsSL "$REPO_ARCHIVE_URL" | tar xz -C "$SCRIPT_DIR" --strip-components=1 2>/dev/null; then
+            download_ok=true
+        else
+            echo "  curl 下载失败，尝试 wget..."
+        fi
+    fi
+
+    if [ "$download_ok" = false ] && command -v wget &>/dev/null; then
+        echo "  使用 wget 下载..."
+        if wget -qO- "$REPO_ARCHIVE_URL" | tar xz -C "$SCRIPT_DIR" --strip-components=1 2>/dev/null; then
+            download_ok=true
+        fi
+    fi
+
+    if [ "$download_ok" = false ]; then
+        echo "错误: 无法下载项目文件"
+        echo "  请手动克隆: git clone ${REPO_URL}.git"
         exit 1
     fi
+
+    echo "  ✓ 下载完成"
 fi
 
 echo " 脚本目录: $SCRIPT_DIR"
